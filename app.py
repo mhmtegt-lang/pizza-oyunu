@@ -26,12 +26,12 @@ st.markdown("""
         font-weight: bold;
     }
 
-    /* SİYAH BUTON YAZISI İÇİN ATOMİK ÇÖZÜM */
+    /* SİYAH BUTON YAZISI İÇİN KESİN ÇÖZÜM */
     div.stButton > button {
         background-color: #FFD700 !important;
         border: 4px solid #2E1A12 !important;
         border-radius: 15px !important;
-        height: 75px !important;
+        height: 70px !important;
         width: 100% !important;
         box-shadow: 0px 6px 15px rgba(0,0,0,0.5);
     }
@@ -53,7 +53,7 @@ st.markdown("""
         border: 4px dashed #FFD700;
         border-radius: 25px;
         padding: 30px;
-        margin-top: 30px;
+        margin-top: 20px;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -85,7 +85,7 @@ class PizzaEngine:
         angle_step = 360 / slices
         for i in range(slices):
             angle = math.radians(i * angle_step - 90)
-            draw.line([self.center, self.center, self.center + 230 * math.cos(angle), self.center + 230 * math.sin(angle)], fill=self.color_line, width=5)
+            draw.line([self.center, self.center, self.center + 230 * math.cos(angle)], fill=self.color_line, width=5)
         if is_taken:
             mask = Image.new("L", (self.size, self.size), 255)
             mask_draw = ImageDraw.Draw(mask)
@@ -96,9 +96,7 @@ class PizzaEngine:
     def get_slice_only(self, slices):
         img = Image.new("RGBA", (self.size, self.size), (0,0,0,0))
         draw = ImageDraw.Draw(img)
-        # Beyaz Tabak Çizimi
         draw.ellipse([30, 30, 470, 470], fill="#F5F5F5", outline="#CCCCCC", width=5)
-        
         pizza_img = Image.new("RGBA", (self.size, self.size), (0,0,0,0))
         p_draw = ImageDraw.Draw(pizza_img)
         self._draw_base(p_draw)
@@ -122,7 +120,7 @@ engine = PizzaEngine()
 st.title("🍕 Karnını Hangisi Daha Çok Doyurur? 🍕")
 st.write("Dilim sayılarını seç, pizzalardan birer parça al ve doyup doymayacağını kontrol et!")
 
-# --- KONTROL PANELİ ---
+# --- ÜST PANEL: AYARLAR ---
 c_col1, c_col2, c_col3 = st.columns([2, 2, 1])
 with c_col1:
     st.session_state.sl_a = st.number_input("Sol Pizza Dilim Sayısı:", 2, 20, st.session_state.sl_a)
@@ -131,67 +129,64 @@ with c_col2:
 with c_col3:
     st.write("Sıfırla")
     if st.button("🔄 SIFIRLA"):
-        st.session_state.tk_a = False
-        st.session_state.tk_b = False
-        st.session_state.show_res = False
+        st.session_state.tk_a = st.session_state.tk_b = st.session_state.show_res = False
         st.rerun()
 
-# --- ÜST PANEL: PİZZALAR ---
+# --- ORTA PANEL: PİZZALAR ---
 col1, col2 = st.columns(2)
-
 with col1:
     st.subheader(f"{st.session_state.sl_a} Parçalı Pizza")
     st.image(engine.get_pizza_view(st.session_state.sl_a, st.session_state.tk_a), use_container_width=True)
-    if st.button(f"BURADAN DİLİM AL", key="btn_a"):
-        st.session_state.tk_a = True
-        st.session_state.show_res = False # Dilim alınca sonucu gizle (yeniden kontrol etsin)
+    if st.button("BURADAN DİLİM AL", key="btn_a"):
+        st.session_state.tk_a, st.session_state.show_res = True, False
         st.rerun()
 
 with col2:
     st.subheader(f"{st.session_state.sl_b} Parçalı Pizza")
     st.image(engine.get_pizza_view(st.session_state.sl_b, st.session_state.tk_b), use_container_width=True)
-    if st.button(f"ŞURADAN DİLİM AL", key="btn_b"):
-        st.session_state.tk_b = True
-        st.session_state.show_res = False
+    if st.button("ŞURADAN DİLİM AL", key="btn_b"):
+        st.session_state.tk_b, st.session_state.show_res = True, False
         st.rerun()
 
-# --- ALT PANEL: TABAKLAR VE SORU BUTONU ---
+# --- ALT PANEL: TABAKLAR ---
 if st.session_state.tk_a or st.session_state.tk_b:
-    st.markdown("---")
-    
-    # SORU BUTONU
-    _, mid_btn, _ = st.columns([1, 2, 1])
-    with mid_btn:
-        if st.button("🧐 HADİ KONTROL EDELİM! DOYACAK MIYIM?"):
-            st.session_state.show_res = True
-            st.rerun()
-
     st.markdown("<div class='tabak-paneli'>", unsafe_allow_html=True)
-    st.markdown("## 🍽️ Senin Tabağın")
-    
+    st.markdown("## 🍽️ Senin Tabakların")
     res_col1, res_col2 = st.columns(2)
     
     with res_col1:
         if st.session_state.tk_a:
             st.image(engine.get_slice_only(st.session_state.sl_a), use_container_width=True)
-            st.markdown(f"### Dilim: 1 / {st.session_state.sl_a}")
+            st.markdown(f"### Dilim Miktarı: 1 / {st.session_state.sl_a}")
             if st.session_state.show_res:
-                if st.session_state.sl_a <= 5:
-                    st.success("😋 KARNIN HARİKA DOYAR!")
+                if st.session_state.sl_a < st.session_state.sl_b:
+                    st.success("😋 Bu dilim daha büyük, daha fazla doyarım!")
+                elif st.session_state.sl_a > st.session_state.sl_b:
+                    st.warning("🧐 Bu dilim daha küçük, daha az doyarım.")
                 else:
-                    st.warning("🧐 BU BİRAZ KÜÇÜK, DOYMAYABİLİRSİN...")
+                    st.info("🤔 İki dilim de aynı boyutta!")
         else:
-            st.info("Bu tabak henüz boş.")
+            st.info("Sol tabak boş.")
 
     with res_col2:
         if st.session_state.tk_b:
             st.image(engine.get_slice_only(st.session_state.sl_b), use_container_width=True)
-            st.markdown(f"### Dilim: 1 / {st.session_state.sl_b}")
+            st.markdown(f"### Dilim Miktarı: 1 / {st.session_state.sl_b}")
             if st.session_state.show_res:
-                if st.session_state.sl_b <= 5:
-                    st.success("😋 KARNIN HARİKA DOYAR!")
+                if st.session_state.sl_b < st.session_state.sl_a:
+                    st.success("😋 Bu dilim daha büyük, daha fazla doyarım!")
+                elif st.session_state.sl_b > st.session_state.sl_a:
+                    st.warning("🧐 Bu dilim daha küçük, daha az doyarım.")
                 else:
-                    st.warning("🧐 BU BİRAZ KÜÇÜK, DOYMAYABİLİRSİN...")
+                    st.info("🤔 İki dilim de aynı boyutta!")
         else:
-            st.info("Bu tabak henüz boş.")
+            st.info("Sağ tabak boş.")
     st.markdown("</div>", unsafe_allow_html=True)
+
+    # --- EN ALT PANEL: KONTROL BUTONU ---
+    st.markdown("---")
+    _, mid_btn, _ = st.columns([1, 2, 1])
+    with mid_btn:
+        if st.button("🧐 HADİ KONTROL EDELİM! DOYACAK MIYIM?"):
+            st.session_state.show_res = True
+            st.rerun()
