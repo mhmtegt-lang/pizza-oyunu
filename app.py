@@ -5,7 +5,7 @@ import math
 # --- SAYFA AYARLARI ---
 st.set_page_config(page_title="Hangisi Doyurur?", layout="wide")
 
-# --- TASARIM (CSS) ---
+# --- TASARIM (CSS) - BUTON YAZILARINI SİYAH YAPMA GARANTİSİ ---
 st.markdown("""
     <style>
     /* Arka Plan */
@@ -26,17 +26,17 @@ st.markdown("""
         font-weight: bold;
     }
 
-    /* SİYAH BUTON YAZISI İÇİN KESİN ÇÖZÜM */
+    /* SARI BUTON İÇİNDEKİ YAZIYI SİYAHA ZORLA (ZORUNLU AYAR) */
     div.stButton > button {
         background-color: #FFD700 !important;
         border: 4px solid #2E1A12 !important;
         border-radius: 15px !important;
-        height: 70px !important;
+        height: 75px !important;
         width: 100% !important;
         box-shadow: 0px 6px 15px rgba(0,0,0,0.5);
     }
 
-    /* Buton içindeki tüm yazıları (p, span, div) zorla siyah yap */
+    /* Buton içindeki tüm yazıları (p, span, div) simsiyah yap */
     div.stButton > button * {
         color: #000000 !important; 
         font-weight: 900 !important;
@@ -85,7 +85,13 @@ class PizzaEngine:
         angle_step = 360 / slices
         for i in range(slices):
             angle = math.radians(i * angle_step - 90)
-            draw.line([self.center, self.center, self.center + 230 * math.cos(angle)], fill=self.color_line, width=5)
+            # HATA BURADAYDI: Hem cos (X) hem sin (Y) koordinatlarını ekledik
+            draw.line([
+                self.center, self.center, 
+                self.center + 230 * math.cos(angle), 
+                self.center + 230 * math.sin(angle)
+            ], fill=self.color_line, width=5)
+        
         if is_taken:
             mask = Image.new("L", (self.size, self.size), 255)
             mask_draw = ImageDraw.Draw(mask)
@@ -97,6 +103,7 @@ class PizzaEngine:
         img = Image.new("RGBA", (self.size, self.size), (0,0,0,0))
         draw = ImageDraw.Draw(img)
         draw.ellipse([30, 30, 470, 470], fill="#F5F5F5", outline="#CCCCCC", width=5)
+        
         pizza_img = Image.new("RGBA", (self.size, self.size), (0,0,0,0))
         p_draw = ImageDraw.Draw(pizza_img)
         self._draw_base(p_draw)
@@ -118,7 +125,6 @@ if 'show_res' not in st.session_state: st.session_state.show_res = False
 engine = PizzaEngine()
 
 st.title("🍕 Karnını Hangisi Daha Çok Doyurur? 🍕")
-st.write("Dilim sayılarını seç, pizzalardan birer parça al ve doyup doymayacağını kontrol et!")
 
 # --- ÜST PANEL: AYARLAR ---
 c_col1, c_col2, c_col3 = st.columns([2, 2, 1])
@@ -137,7 +143,7 @@ col1, col2 = st.columns(2)
 with col1:
     st.subheader(f"{st.session_state.sl_a} Parçalı Pizza")
     st.image(engine.get_pizza_view(st.session_state.sl_a, st.session_state.tk_a), use_container_width=True)
-    if st.button("BURADAN DİLİM AL", key="btn_a"):
+    if st.button("BU PİZZADAN DİLİM AL", key="btn_a"):
         st.session_state.tk_a, st.session_state.show_res = True, False
         st.rerun()
 
