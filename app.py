@@ -1,205 +1,215 @@
 import streamlit as st
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFont
 import math
 
 # --- SAYFA AYARLARI ---
 st.set_page_config(page_title="Pizza Oyunu", layout="wide")
 
-# --- TASARIM GÜNCELLEMESİ (OKUNABİLİR BUTONLAR) ---
+# --- TASARIM (CSS) ---
 st.markdown("""
     <style>
-    /* Arka plan rengi */
+    /* Arka Plan */
     .stApp { background-color: #5D4037; } 
     
-    /* Başlıklar ve yazılar */
-    h1, h2, h3, p { 
+    /* Yazı Stilleri */
+    h1, h2, h3, p, div { 
         color: #FFECB3 !important; 
-        font-family: 'Comic Sans MS', sans-serif; 
+        font-family: 'Comic Sans MS', 'Arial', sans-serif; 
         text-align: center; 
     }
     
-    /* --- BUTON TASARIMI (BURASI DEĞİŞTİ) --- */
+    /* Kesir Gösterimi (Özel Stil) */
+    .fraction-text {
+        font-size: 60px;
+        font-weight: bold;
+        color: #FFD700; /* Altın Sarısı */
+        text-shadow: 2px 2px 4px #000000;
+    }
+    
+    /* Buton Tasarımı - OKUNAKLI */
     .stButton button {
-        background-color: #FFD700 !important; /* Parlak Altın Sarısı */
-        color: #3E2723 !important;            /* Koyu Kahve Yazı (Neredeyse Siyah) */
-        font-weight: 900 !important;          /* Çok Kalın Yazı */
-        font-size: 24px !important;           /* Büyük Punto */
-        border-radius: 12px !important;
-        border: 4px solid #3E2723 !important; /* Koyu Çerçeve */
-        padding: 15px 20px !important;
+        background-color: #FFD700 !important;
+        color: #3E2723 !important; /* Koyu Kahve Yazı */
+        font-weight: 900 !important;
+        font-size: 24px !important;
+        border-radius: 15px !important;
+        border: 4px solid #3E2723 !important;
+        padding: 10px 24px !important;
         width: 100%;
-        transition: all 0.3s ease;
+        transition: transform 0.2s;
     }
-    
-    /* Mouse üzerine gelince (Hover) */
     .stButton button:hover {
-        background-color: #FF6F00 !important; /* Turuncuya dönsün */
-        color: #FFFFFF !important;            /* Yazı beyaz olsun */
-        transform: scale(1.05);               /* Hafif büyüsün */
-        border-color: #FFFFFF !important;
+        background-color: #FFCA28 !important;
+        transform: scale(1.05);
+        color: #000000 !important;
     }
     
-    /* Buton içindeki tüm elementleri (p, span) zorla boya */
-    .stButton button p, .stButton button span {
-        color: inherit !important;
+    /* Konteynerleri belirginleştir */
+    [data-testid="column"] {
+        background-color: rgba(0,0,0,0.2);
+        border-radius: 20px;
+        padding: 20px;
+        margin: 10px;
     }
     </style>
     """, unsafe_allow_html=True)
 
 class ProceduralPizza:
-    """
-    Vektörel tarzda pizza üreten motor.
-    """
+    """Pizza ve Dilim Çizim Motoru"""
     def __init__(self):
-        self.width = 600
-        self.height = 600
-        # Renk Paleti (Referans görsele uygun)
-        self.color_crust = "#D38E45"   # Kızarmış kenar
-        self.color_cheese = "#FFCA28"  # Erimiş peynir sarısı
-        self.color_pep = "#C62828"     # Biberoni kırmızısı
-        self.color_line = "#8D6E63"    # Kesim çizgileri
+        self.width = 500
+        self.height = 500
+        self.color_crust = "#D38E45"   
+        self.color_cheese = "#FFCA28"  
+        self.color_pep = "#C62828"     
+        self.color_line = "#8D6E63"    
 
-    def generate_base_pizza(self):
-        img = Image.new("RGBA", (self.width, self.height), (0,0,0,0))
-        draw = ImageDraw.Draw(img)
-        
-        # 1. Hamur
+    def _draw_base(self, draw):
+        # Hamur ve Peynir
         margin = 20
         draw.ellipse([margin, margin, self.width-margin, self.height-margin], fill=self.color_crust)
-        
-        # 2. Peynir
-        crust_width = 40
+        crust_width = 35
         draw.ellipse([margin+crust_width, margin+crust_width, 
                       self.width-margin-crust_width, self.height-margin-crust_width], 
                      fill=self.color_cheese)
         
-        # 3. Biberoniler (Sabit konumlar)
-        center_x, center_y = self.width // 2, self.height // 2
-        pep_radius = 28 # Biraz büyüttük
-        
-        # İç çember
-        for angle in range(0, 360, 60): 
+        # Biberoniler
+        center = self.width // 2
+        pep_r = 22
+        # İç halka
+        for angle in range(0, 360, 60):
             rad = math.radians(angle)
-            dist = 100
-            px = center_x + dist * math.cos(rad) - pep_radius
-            py = center_y + dist * math.sin(rad) - pep_radius
-            draw.ellipse([px, py, px+pep_radius*2, py+pep_radius*2], fill=self.color_pep)
+            px = center + 80 * math.cos(rad) - pep_r
+            py = center + 80 * math.sin(rad) - pep_r
+            draw.ellipse([px, py, px+pep_r*2, py+pep_r*2], fill=self.color_pep)
+        # Dış halka
+        for angle in range(30, 390, 45):
+            rad = math.radians(angle)
+            px = center + 150 * math.cos(rad) - pep_r
+            py = center + 150 * math.sin(rad) - pep_r
+            draw.ellipse([px, py, px+pep_r*2, py+pep_r*2], fill=self.color_pep)
 
-        # Dış çember
-        for angle in range(30, 390, 45): 
-            rad = math.radians(angle)
-            dist = 190
-            px = center_x + dist * math.cos(rad) - pep_radius
-            py = center_y + dist * math.sin(rad) - pep_radius
-            draw.ellipse([px, py, px+pep_radius*2, py+pep_radius*2], fill=self.color_pep)
+    def get_full_pizza_with_lines(self, slices):
+        """Bütün pizzayı kesim çizgileriyle gösterir"""
+        img = Image.new("RGBA", (self.width, self.height), (0,0,0,0))
+        draw = ImageDraw.Draw(img)
+        self._draw_base(draw)
+        
+        center = self.width // 2
+        radius = (self.width // 2) - 20
+        angle_step = 360 / slices
+        
+        for i in range(slices):
+            angle = math.radians(i * angle_step - 90)
+            end_x = center + radius * math.cos(angle)
+            end_y = center + radius * math.sin(angle)
+            draw.line([center, center, end_x, end_y], fill=self.color_line, width=5)
             
         return img
 
-    def get_sliced_view(self, total_slices, is_taken=False):
-        base = self.generate_base_pizza()
+    def get_single_slice(self, slices):
+        """Sadece tek bir dilimi kesip çıkarır"""
+        # Önce tam pizzayı çiz
+        base = Image.new("RGBA", (self.width, self.height), (0,0,0,0))
         draw = ImageDraw.Draw(base)
+        self._draw_base(draw)
         
-        center_x, center_y = self.width // 2, self.height // 2
-        radius = (self.width // 2) - 20
-        angle_step = 360 / total_slices
-        
-        # Kesim çizgileri
-        if not is_taken:
-            for i in range(total_slices):
-                angle = math.radians(i * angle_step - 90)
-                end_x = center_x + radius * math.cos(angle)
-                end_y = center_y + radius * math.sin(angle)
-                draw.line([center_x, center_y, end_x, end_y], fill=self.color_line, width=6)
-            return base
-        else:
-            # Dilim alma işlemi
-            mask = Image.new("L", (self.width, self.height), 255)
-            mask_draw = ImageDraw.Draw(mask)
-            
-            start_angle = -90
-            end_angle = start_angle + angle_step
-            
-            mask_draw.pieslice([20, 20, self.width-20, self.height-20], start_angle, end_angle, fill=0)
-            base.putalpha(mask)
-            return base
-
-    def get_single_slice(self, total_slices):
-        base = self.generate_base_pizza()
+        # Maske oluştur (Sadece dilim alanı beyaz olacak)
         mask = Image.new("L", (self.width, self.height), 0)
         mask_draw = ImageDraw.Draw(mask)
         
-        angle_step = 360 / total_slices
-        start_angle = -90
-        end_angle = start_angle + angle_step
+        angle_step = 360 / slices
+        # Dilimi yukarı bakacak şekilde ayarla (-90 derece)
+        mask_draw.pieslice([20, 20, self.width-20, self.height-20], -90, -90 + angle_step, fill=255)
         
-        mask_draw.pieslice([20, 20, self.width-20, self.height-20], start_angle, end_angle, fill=255)
+        # Maskeyi uygula
         base.putalpha(mask)
+        
+        # Görseli kırp (Boş alanları at)
+        bbox = base.getbbox()
+        if bbox:
+            return base.crop(bbox)
         return base
 
-# --- UYGULAMA AKIŞI ---
+# --- UYGULAMA MANTIĞI ---
 
-if 'durum' not in st.session_state:
-    st.session_state.durum = 'giris'
+if 'mode' not in st.session_state:
+    st.session_state.mode = 'select' # 'select' veya 'compare'
 
 pizza_maker = ProceduralPizza()
 
-st.title("🍕 Pizza Dilimleri: Hangisi Daha Büyük? 🍕")
+st.title("🍕 Pizza Dilimleri: Hangisi Daha Çok Doyurur? 🍕")
 
-# --- GİRİŞ EKRANI ---
-if st.session_state.durum == 'giris':
-    st.markdown("### Aşağıdaki pizzalardan bir dilim seç!")
+# --- 1. AŞAMA: SEÇİM EKRANI ---
+if st.session_state.mode == 'select':
+    st.markdown("### Aşağıda iki farklı pizza var. İkisinden de tabağına birer dilim alıp karşılaştıralım!")
     
     col1, col2 = st.columns(2)
     
     with col1:
-        st.header("1/4 Pizza")
-        st.image(pizza_maker.get_sliced_view(4, is_taken=False), use_container_width=True)
-        # Buton metnini büyüttük ve netleştirdik
-        if st.button("Bu Dilimi Seç (1/4)", key="btn_1_4"):
-            st.session_state.durum = 'sonuc_4'
-            st.rerun()
+        st.header("4 Dilimli Pizza")
+        st.image(pizza_maker.get_full_pizza_with_lines(4), use_container_width=True)
+        st.markdown("**Dilimler büyük görünüyor...**")
 
     with col2:
-        st.header("1/12 Pizza")
-        st.image(pizza_maker.get_sliced_view(12, is_taken=False), use_container_width=True)
-        # Buton metnini büyüttük ve netleştirdik
-        if st.button("Bu Dilimi Seç (1/12)", key="btn_1_12"):
-            st.session_state.durum = 'sonuc_12'
+        st.header("12 Dilimli Pizza")
+        st.image(pizza_maker.get_full_pizza_with_lines(12), use_container_width=True)
+        st.markdown("**Dilimler daha ince görünüyor...**")
+
+    st.markdown("---")
+    # Ortaya büyük bir buton
+    _, mid_col, _ = st.columns([1, 2, 1])
+    with mid_col:
+        if st.button("🍽️ İKİSİNDEN DE BİRER DİLİM AL VE KARŞILAŞTIR! 🍽️"):
+            st.session_state.mode = 'compare'
             st.rerun()
 
-# --- SONUÇ: 1/4 ---
-elif st.session_state.durum == 'sonuc_4':
-    st.success("🎉 HARİKA SEÇİM! 🎉")
+# --- 2. AŞAMA: KARŞILAŞTIRMA EKRANI ---
+elif st.session_state.mode == 'compare':
+    st.markdown("## İşte Tabağındaki Dilimler!")
+    st.write("Bakalım hangisi seni daha çok doyuracak?")
     
     col_a, col_b = st.columns(2)
-    with col_a:
-        st.write("Eksilen Parça:")
-        st.image(pizza_maker.get_sliced_view(4, is_taken=True), use_container_width=True)
-    with col_b:
-        st.write("Senin Dilimin:")
-        st.image(pizza_maker.get_single_slice(4), use_container_width=True)
-        
-    st.markdown("## 1/4 Dilim Kocaman! Doyurucu bir seçim. 😋")
-    st.balloons()
     
-    if st.button("TEKRAR OYNA 🔄", key="reset_4"):
-        st.session_state.durum = 'giris'
-        st.rerun()
+    # 1/4 Dilim Sonucu
+    with col_a:
+        st.success("DOYURUCU SEÇİM! 😋")
+        # Dilim Görseli
+        slice_img_4 = pizza_maker.get_single_slice(4)
+        # Görseli ortalamak için st.image kullanımı
+        st.image(slice_img_4, width=300) 
+        
+        # Matematiksel Kesir
+        st.markdown('<p class="fraction-text">1/4</p>', unsafe_allow_html=True)
+        
+        # Yorum
+        st.markdown("""
+        ### Kocaman!
+        Bu dilimle **karnın tıka basa doyar.** Çünkü pizzayı sadece 4 kişiye böldük, sana büyük parça düştü.
+        """)
 
-# --- SONUÇ: 1/12 ---
-elif st.session_state.durum == 'sonuc_12':
-    st.warning("🧐 ÇOK KÜÇÜK...")
-    
-    col_a, col_b = st.columns(2)
-    with col_a:
-        st.write("Eksilen Parça:")
-        st.image(pizza_maker.get_sliced_view(12, is_taken=True), use_container_width=True)
+    # 1/12 Dilim Sonucu
     with col_b:
-        st.write("Senin Dilimin:")
-        st.image(pizza_maker.get_single_slice(12), use_container_width=True)
+        st.warning("SADECE TARDIMLIK... 🧐")
+        # Dilim Görseli
+        slice_img_12 = pizza_maker.get_single_slice(12)
+        st.image(slice_img_12, width=300)
         
-    st.markdown("## 1/12 Dilim kürdan gibi ince! Hala aç olabilirsin. 😕")
+        # Matematiksel Kesir
+        st.markdown('<p class="fraction-text">1/12</p>', unsafe_allow_html=True)
+        
+        # Yorum
+        st.markdown("""
+        ### Minicik...
+        Bu dilim **dişinin kovuğuna bile yetmez!**
+        Çünkü pizzayı 12 kişiye böldük, sana çok ince bir parça kaldı.
+        """)
+
+    st.markdown("---")
     
-    if st.button("TEKRAR DENE 🔄", key="reset_12"):
-        st.session_state.durum = 'giris'
-        st.rerun()
+    # Sıfırlama Butonu
+    _, reset_col, _ = st.columns([1, 2, 1])
+    with reset_col:
+        if st.button("🔄 Tekrar Oyna"):
+            st.session_state.mode = 'select'
+            st.rerun()
