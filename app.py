@@ -3,42 +3,40 @@ from PIL import Image, ImageDraw
 import math
 
 # --- SAYFA AYARLARI ---
-st.set_page_config(page_title="Pizza Kesir Laboratuvarı", layout="wide")
+st.set_page_config(page_title="Hangisi Doyurur?", layout="wide")
 
-# --- TASARIM (CSS) - BUTON YAZILARINI SİYAH YAPMA VE DOYMA PANELİ ---
+# --- TASARIM (CSS) ---
 st.markdown("""
     <style>
+    /* Arka Plan */
     .stApp { background-color: #5D4037; } 
+    
+    /* Başlıklar */
     h1, h2, h3 { 
         color: #FFD700 !important; 
         font-family: 'Arial Black', sans-serif; 
         text-align: center;
         text-shadow: 2px 2px 5px #000000;
     }
+    
     p, span, div, label { 
         color: #FFFFFF !important; 
         font-family: 'Comic Sans MS', sans-serif; 
         text-align: center;
         font-weight: bold;
     }
-    
-    /* Kesir Yazısı */
-    .kesir-miktari {
-        font-size: 55px !important;
-        color: #FFD700 !important;
-        font-weight: 900 !important;
-        margin: 5px 0px;
-    }
 
-    /* SİYAH BUTON YAZISI GARANTİSİ */
+    /* SİYAH BUTON YAZISI İÇİN ATOMİK ÇÖZÜM */
     div.stButton > button {
         background-color: #FFD700 !important;
         border: 4px solid #2E1A12 !important;
         border-radius: 15px !important;
-        height: 70px !important;
+        height: 75px !important;
         width: 100% !important;
+        box-shadow: 0px 6px 15px rgba(0,0,0,0.5);
     }
-    /* Butonun içindeki her şeyi (yazı, span, div) siyaha zorla */
+
+    /* Buton içindeki tüm yazıları (p, span, div) zorla siyah yap */
     div.stButton > button * {
         color: #000000 !important; 
         font-weight: 900 !important;
@@ -47,20 +45,20 @@ st.markdown("""
     
     div.stButton > button:hover {
         background-color: #FFA500 !important;
-        transform: scale(1.02);
     }
-    
-    .input-box {
-        background-color: rgba(0,0,0,0.2);
-        padding: 20px;
-        border-radius: 20px;
-        margin-bottom: 20px;
+
+    /* Tabak Paneli */
+    .tabak-paneli {
+        background-color: rgba(0,0,0,0.3);
+        border: 4px dashed #FFD700;
+        border-radius: 25px;
+        padding: 30px;
+        margin-top: 30px;
     }
     </style>
     """, unsafe_allow_html=True)
 
 class PizzaEngine:
-    """İstenen her n sayısı için dinamik pizza çizen motor."""
     def __init__(self):
         self.size = 500
         self.center = self.size // 2
@@ -70,12 +68,10 @@ class PizzaEngine:
         self.color_line = "#6D4C41"
 
     def _draw_base(self, draw):
-        # Pizza tabanı
         draw.ellipse([20, 20, 480, 480], fill=self.color_crust)
         draw.ellipse([55, 55, 445, 445], fill=self.color_cheese)
-        # Biberoniler
-        pep_r = 22
-        for r, count in [(85, 6), (165, 10)]:
+        pep_r = 24
+        for r, count in [(90, 6), (170, 10)]:
             for i in range(count):
                 angle = math.radians(i * (360/count))
                 px = self.center + r * math.cos(angle) - pep_r
@@ -86,12 +82,10 @@ class PizzaEngine:
         img = Image.new("RGBA", (self.size, self.size), (0,0,0,0))
         draw = ImageDraw.Draw(img)
         self._draw_base(draw)
-        
         angle_step = 360 / slices
         for i in range(slices):
             angle = math.radians(i * angle_step - 90)
-            draw.line([self.center, self.center, self.center + 235 * math.cos(angle), self.center + 235 * math.sin(angle)], fill=self.color_line, width=4)
-        
+            draw.line([self.center, self.center, self.center + 230 * math.cos(angle), self.center + 230 * math.sin(angle)], fill=self.color_line, width=5)
         if is_taken:
             mask = Image.new("L", (self.size, self.size), 255)
             mask_draw = ImageDraw.Draw(mask)
@@ -99,92 +93,105 @@ class PizzaEngine:
             img.putalpha(mask)
         return img
 
-    def get_slice_on_plate(self, slices):
+    def get_slice_only(self, slices):
         img = Image.new("RGBA", (self.size, self.size), (0,0,0,0))
         draw = ImageDraw.Draw(img)
-        # Beyaz Tabak
+        # Beyaz Tabak Çizimi
         draw.ellipse([30, 30, 470, 470], fill="#F5F5F5", outline="#CCCCCC", width=5)
         
         pizza_img = Image.new("RGBA", (self.size, self.size), (0,0,0,0))
         p_draw = ImageDraw.Draw(pizza_img)
         self._draw_base(p_draw)
-        
         mask = Image.new("L", (self.size, self.size), 0)
         mask_draw = ImageDraw.Draw(mask)
         angle_step = 360 / slices
         mask_draw.pieslice([40, 40, 460, 460], -90, -90 + angle_step, fill=255)
-        
         pizza_img.putalpha(mask)
         img.alpha_composite(pizza_img)
         return img
 
-# --- DURUM YÖNETİMİ ---
-if 'sl_a' not in st.session_state: st.session_state.sl_a = 5
-if 'sl_b' not in st.session_state: st.session_state.sl_b = 7
+# --- DURUM (STATE) YÖNETİMİ ---
+if 'sl_a' not in st.session_state: st.session_state.sl_a = 4
+if 'sl_b' not in st.session_state: st.session_state.sl_b = 12
 if 'tk_a' not in st.session_state: st.session_state.tk_a = False
 if 'tk_b' not in st.session_state: st.session_state.tk_b = False
+if 'show_res' not in st.session_state: st.session_state.show_res = False
 
 engine = PizzaEngine()
 
-st.title("🍕 Pizza Dilimi Karşılaştırma Laboratuvarı 🍕")
+st.title("🍕 Karnını Hangisi Daha Çok Doyurur? 🍕")
+st.write("Dilim sayılarını seç, pizzalardan birer parça al ve doyup doymayacağını kontrol et!")
 
-# --- KONTROL ALANI ---
-st.markdown("<div class='input-box'>", unsafe_allow_html=True)
-c1, c2, c3 = st.columns([2, 2, 1])
-with c1:
-    st.session_state.sl_a = st.number_input("Soldaki Pizza Kaç Dilim Olsun?", 2, 20, st.session_state.sl_a)
-with c2:
-    st.session_state.sl_b = st.number_input("Sağdaki Pizza Kaç Dilim Olsun?", 2, 20, st.session_state.sl_b)
-with c3:
+# --- KONTROL PANELİ ---
+c_col1, c_col2, c_col3 = st.columns([2, 2, 1])
+with c_col1:
+    st.session_state.sl_a = st.number_input("Sol Pizza Dilim Sayısı:", 2, 20, st.session_state.sl_a)
+with c_col2:
+    st.session_state.sl_b = st.number_input("Sağ Pizza Dilim Sayısı:", 2, 20, st.session_state.sl_b)
+with c_col3:
     st.write("Sıfırla")
-    if st.button("🔄 TEMİZLE"):
+    if st.button("🔄 SIFIRLA"):
         st.session_state.tk_a = False
         st.session_state.tk_b = False
+        st.session_state.show_res = False
         st.rerun()
-st.markdown("</div>", unsafe_allow_html=True)
 
-# --- ÜST PANEL ---
+# --- ÜST PANEL: PİZZALAR ---
 col1, col2 = st.columns(2)
 
 with col1:
     st.subheader(f"{st.session_state.sl_a} Parçalı Pizza")
     st.image(engine.get_pizza_view(st.session_state.sl_a, st.session_state.tk_a), use_container_width=True)
-    if st.button(f"BURADAN DİLİM AL", key="b_a"):
+    if st.button(f"BURADAN DİLİM AL", key="btn_a"):
         st.session_state.tk_a = True
+        st.session_state.show_res = False # Dilim alınca sonucu gizle (yeniden kontrol etsin)
         st.rerun()
 
 with col2:
     st.subheader(f"{st.session_state.sl_b} Parçalı Pizza")
     st.image(engine.get_pizza_view(st.session_state.sl_b, st.session_state.tk_b), use_container_width=True)
-    if st.button(f"ŞURADAN DİLİM AL", key="b_b"):
+    if st.button(f"ŞURADAN DİLİM AL", key="btn_b"):
         st.session_state.tk_b = True
+        st.session_state.show_res = False
         st.rerun()
 
-# --- ALT PANEL: TABAKLAR ---
+# --- ALT PANEL: TABAKLAR VE SORU BUTONU ---
 if st.session_state.tk_a or st.session_state.tk_b:
     st.markdown("---")
-    st.markdown("## 🍽️ Senin Tabakların")
     
-    t_col1, t_col2 = st.columns(2)
-    
-    with t_col1:
-        if st.session_state.tk_a:
-            st.image(engine.get_slice_on_plate(st.session_state.sl_a), use_container_width=True)
-            st.markdown(f'<p class="kesir-miktari">1 / {st.session_state.sl_a}</p>', unsafe_allow_html=True)
-            if st.session_state.sl_a <= 5:
-                st.markdown("### 😋 KARNIN DOYAR!")
-            else:
-                st.markdown("### 🧐 BİRAZ KÜÇÜK...")
-        else:
-            st.write("Henüz dilim almadın.")
+    # SORU BUTONU
+    _, mid_btn, _ = st.columns([1, 2, 1])
+    with mid_btn:
+        if st.button("🧐 HADİ KONTROL EDELİM! DOYACAK MIYIM?"):
+            st.session_state.show_res = True
+            st.rerun()
 
-    with t_col2:
-        if st.session_state.tk_b:
-            st.image(engine.get_slice_on_plate(st.session_state.sl_b), use_container_width=True)
-            st.markdown(f'<p class="kesir-miktari">1 / {st.session_state.sl_b}</p>', unsafe_allow_html=True)
-            if st.session_state.sl_b <= 5:
-                st.markdown("### 😋 KARNIN DOYAR!")
-            else:
-                st.markdown("### 🧐 BİRAZ KÜÇÜK...")
+    st.markdown("<div class='tabak-paneli'>", unsafe_allow_html=True)
+    st.markdown("## 🍽️ Senin Tabağın")
+    
+    res_col1, res_col2 = st.columns(2)
+    
+    with res_col1:
+        if st.session_state.tk_a:
+            st.image(engine.get_slice_only(st.session_state.sl_a), use_container_width=True)
+            st.markdown(f"### Dilim: 1 / {st.session_state.sl_a}")
+            if st.session_state.show_res:
+                if st.session_state.sl_a <= 5:
+                    st.success("😋 KARNIN HARİKA DOYAR!")
+                else:
+                    st.warning("🧐 BU BİRAZ KÜÇÜK, DOYMAYABİLİRSİN...")
         else:
-            st.write("Henüz dilim almadın.")
+            st.info("Bu tabak henüz boş.")
+
+    with res_col2:
+        if st.session_state.tk_b:
+            st.image(engine.get_slice_only(st.session_state.sl_b), use_container_width=True)
+            st.markdown(f"### Dilim: 1 / {st.session_state.sl_b}")
+            if st.session_state.show_res:
+                if st.session_state.sl_b <= 5:
+                    st.success("😋 KARNIN HARİKA DOYAR!")
+                else:
+                    st.warning("🧐 BU BİRAZ KÜÇÜK, DOYMAYABİLİRSİN...")
+        else:
+            st.info("Bu tabak henüz boş.")
+    st.markdown("</div>", unsafe_allow_html=True)
