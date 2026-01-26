@@ -3,15 +3,15 @@ from PIL import Image, ImageDraw
 import math
 
 # --- SAYFA AYARLARI ---
-st.set_page_config(page_title="Pizza Dilimi Karşılaştırma", layout="wide")
+st.set_page_config(page_title="Pizza Karşılaştırma Oyunu", layout="wide")
 
 # --- TASARIM VE OKUNABİLİRLİK (CSS) ---
 st.markdown("""
     <style>
-    /* Arka Plan: Koyu Kahve */
+    /* Arka Plan */
     .stApp { background-color: #5D4037; } 
     
-    /* Başlıklar: Altın Sarısı ve Gölgeli */
+    /* Başlıklar ve Yazılar */
     h1, h2, h3 { 
         color: #FFD700 !important; 
         font-family: 'Arial Black', sans-serif; 
@@ -19,40 +19,39 @@ st.markdown("""
         text-shadow: 2px 2px 5px #000000;
     }
     
-    /* Bilgi Metinleri: Beyaz ve Kalın */
-    p, span, label { 
+    p, span, div { 
         color: #FFFFFF !important; 
         font-family: 'Comic Sans MS', sans-serif; 
-        font-weight: bold !important;
-        font-size: 18px !important;
         text-align: center;
+        font-weight: bold;
     }
 
-    /* BUTONLAR: TAM SİYAH YAZI VE SARI ARKA PLAN (MAKSİMUM OKUNABİLİRLİK) */
+    /* SARI BUTON İÇİNDEKİ SİYAH YAZI AYARI */
     .stButton button {
-        background-color: #FFD700 !important;
-        color: #000000 !important; /* Yazı Rengi Siyah */
-        font-weight: 900 !important; /* Çok Kalın */
+        background-color: #FFD700 !important; /* Sarı Arka Plan */
+        color: #000000 !important;            /* TAM SİYAH YAZI */
+        font-weight: 900 !important;          /* Çok Kalın */
         font-size: 22px !important;
         border-radius: 12px !important;
         border: 4px solid #2E1A12 !important;
         height: 70px !important;
         width: 100% !important;
         box-shadow: 0px 5px 15px rgba(0,0,0,0.4);
+        transition: 0.3s;
     }
     
     .stButton button:hover {
-        background-color: #FFA500 !important;
-        color: #000000 !important;
-        border-color: #FFFFFF !important;
+        background-color: #FFA500 !important; /* Turuncu Hover */
+        color: #000000 !important;            /* Üzerine gelince de siyah kalsın */
+        transform: scale(1.02);
     }
 
-    /* Tabak Bölgesi Paneli */
+    /* Tabak Alanı Paneli */
     .tabak-paneli {
         background-color: rgba(0,0,0,0.3);
         border: 3px dashed #FFD700;
         border-radius: 20px;
-        padding: 25px;
+        padding: 30px;
         margin-top: 30px;
     }
     </style>
@@ -62,16 +61,17 @@ class PizzaEngine:
     def __init__(self):
         self.size = 500
         self.center = self.size // 2
-        self.color_crust = "#D38E45"   # Hamur
-        self.color_cheese = "#FFCA28"  # Peynir
-        self.color_pep = "#C62828"     # Biberoni
-        self.color_line = "#6D4C41"    # Kesim çizgisi
+        self.color_crust = "#D38E45"   
+        self.color_cheese = "#FFCA28"  
+        self.color_pep = "#C62828"     
+        self.color_line = "#6D4C41"
 
     def _draw_base(self, draw):
-        # Pizza tabanı
+        # Hamur kenarı
         draw.ellipse([20, 20, 480, 480], fill=self.color_crust)
+        # Peynir
         draw.ellipse([55, 55, 445, 445], fill=self.color_cheese)
-        # Biberoniler (Sabit konum)
+        # Biberoniler
         pep_r = 22
         for r, count in [(80, 6), (160, 10)]:
             for i in range(count):
@@ -81,19 +81,17 @@ class PizzaEngine:
                 draw.ellipse([px, py, px+pep_r*2, py+pep_r*2], fill=self.color_pep)
 
     def get_pizza_view(self, slices, is_taken=False):
-        """Üstteki pizzayı çizer. Dilim alınmışsa o parça boş kalır."""
+        """Üstteki pizzayı çizer. Dilim alındıysa o parça boş kalır."""
         img = Image.new("RGBA", (self.size, self.size), (0,0,0,0))
         draw = ImageDraw.Draw(img)
         self._draw_base(draw)
         
         angle_step = 360 / slices
-        # Kesim çizgileri
         for i in range(slices):
             angle = math.radians(i * angle_step - 90)
             draw.line([self.center, self.center, self.center + 230 * math.cos(angle), self.center + 230 * math.sin(angle)], fill=self.color_line, width=4)
         
         if is_taken:
-            # Maske ile bir dilimi "kesip at"
             mask = Image.new("L", (self.size, self.size), 255)
             mask_draw = ImageDraw.Draw(mask)
             mask_draw.pieslice([15, 15, 485, 485], -90, -90 + angle_step, fill=0)
@@ -102,7 +100,7 @@ class PizzaEngine:
         return img
 
     def get_slice_on_plate(self, slices):
-        """Sadece alınan dilimi tuvalin kendi boyutunda çizer (Boyut farkı net görünür)"""
+        """Alınan dilimi gerçek boyutunda tuvalde çizer."""
         img = Image.new("RGBA", (self.size, self.size), (0,0,0,0))
         draw = ImageDraw.Draw(img)
         self._draw_base(draw)
@@ -121,25 +119,25 @@ if 'taken_12' not in st.session_state: st.session_state.taken_12 = False
 
 engine = PizzaEngine()
 
-st.title("🍕 Hangi Dilim Daha Büyük? 🍕")
-st.write("Aşağıdaki pizzalara tıkla ve tabakları doldur!")
+st.title("🍕 Hangi Dilim Daha Doyurucu? 🍕")
+st.write("Pizzalara tıkla (butonlara bas) ve tabakları doldur!")
 
 # --- ÜST PANEL: PİZZALAR ---
 col1, col2 = st.columns(2)
 
 with col1:
-    st.subheader("4 Dilimli Pizza")
+    st.subheader("Büyük Dilimli Pizza")
     st.image(engine.get_pizza_view(4, st.session_state.taken_4), use_container_width=True)
     if st.button("Bu Pizzadan Bir Dilim Al"):
         st.session_state.taken_4 = True
 
 with col2:
-    st.subheader("12 Dilimli Pizza")
+    st.subheader("Küçük Dilimli Pizza")
     st.image(engine.get_pizza_view(12, st.session_state.taken_12), use_container_width=True)
     if st.button("Şu Pizzadan Bir Dilim Al"):
         st.session_state.taken_12 = True
 
-# --- ALT PANEL: TABAK VE KARŞILAŞTIRMA ---
+# --- ALT PANEL: TABAK VE DOYMA ANALİZİ ---
 if st.session_state.taken_4 or st.session_state.taken_12:
     st.markdown("<div class='tabak-paneli'>", unsafe_allow_html=True)
     st.markdown("## 🍽️ Senin Tabağın")
@@ -149,18 +147,20 @@ if st.session_state.taken_4 or st.session_state.taken_12:
     with res_col1:
         if st.session_state.taken_4:
             st.image(engine.get_slice_on_plate(4), use_container_width=True)
-            st.markdown("### KOCAMAN DİLİM")
-            st.write("Pizzayı sadece 4'e böldük, bu yüzden parçalar çok büyük!")
+            st.markdown("### KOCAMAN DİLİM 😋")
+            st.markdown("**Bu dilimle karnın tıka basa doyar!**")
+            st.write("Çünkü pizzayı sadece 4 parçaya böldük, sana kocaman bir parça düştü.")
         else:
-            st.write("Daha buradan dilim almadın.")
+            st.write("Buradan henüz dilim almadın.")
 
     with res_col2:
         if st.session_state.taken_12:
             st.image(engine.get_slice_on_plate(12), use_container_width=True)
-            st.markdown("### KÜÇÜCÜK DİLİM")
-            st.write("Pizzayı 12 kişiye böldüğümüz için sana minicik bir parça kaldı.")
+            st.markdown("### KÜÇÜCÜK DİLİM 🧐")
+            st.markdown("**Bu dilim seni doyurmaz...**")
+            st.write("Bu sadece bir atıştırmalık! Pizzayı 12 parçaya böldüğümüz için dilim çok ince kaldı.")
         else:
-            st.write("Daha buradan dilim almadın.")
+            st.write("Buradan henüz dilim almadın.")
             
     st.markdown("</div>", unsafe_allow_html=True)
 
