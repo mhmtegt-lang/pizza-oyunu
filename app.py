@@ -1,15 +1,16 @@
 import streamlit as st
-import matplotlib.pyplot as plt
-import numpy as np
+from PIL import Image, ImageDraw
+import requests
+from io import BytesIO
 
 # --- AYARLAR VE TASARIM ---
 st.set_page_config(
-    page_title="Pizza Oyunu",
+    page_title="Gerçek Pizza Oyunu",
     page_icon="🍕",
     layout="centered"
 )
 
-# Görsel stilini CSS ile ayarla (Sıcak renkler)
+# Tasarım: Koyu arka plan ve okunabilir butonlar
 st.markdown(
     """
     <style>
@@ -18,103 +19,148 @@ st.markdown(
         color: #FFD700 !important; 
         font-family: 'Comic Sans MS', sans-serif; 
     }
+    /* Sarı buton üzerine koyu kahverengi yazı (Rahat Okunur) */
     .stButton button {
-        background-color: #FFD700;
-        color: #8B4513;
-        font-weight: bold;
+        background-color: #FFD700 !important;
+        color: #5c2b0b !important;
+        font-weight: 900 !important; /* Kalın yazı */
         border-radius: 12px;
-        border: 2px solid #5c2b0b;
+        border: 3px solid #5c2b0b;
+        font-size: 18px !important;
     }
     .stButton button:hover {
-        background-color: #FFA500;
-        color: white;
+        background-color: #FFA500 !important;
+        border-color: #8B4513;
+        color: #fff !important;
     }
     </style>
     """,
     unsafe_allow_html=True
 )
 
-# --- PİZZA ÇİZEN SINIF (Mantık Kısmı) ---
-class PizzaVisualizer:
+# --- İNTERNETTEN PİZZA GETİREN VE DİLİMLEYEN MOTOR ---
+class InternetPizzaSlicer:
     def __init__(self):
-        self.background_color = '#8B4513'
-        self.pizza_base_color = '#EDBF85'
-        self.edge_color = '#6D2E15'
-        self.pepperoni_color = '#B22222'
+        # Wikipedia'dan temiz, reklamsız, gerçek bir pizza fotoğrafı adresi
+        self.url = "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d3/Supreme_pizza.jpg/800px-Supreme_pizza.jpg"
+        self.pizza_img = self.download_image()
 
-    def draw_pizza(self, total_slices, slice_to_take=None):
+    def download_image(self):
+        """İnternetten resmi indirir ve hazırlar"""
         try:
-            fig, ax = plt.subplots(figsize=(4, 4))
-            fig.patch.set_facecolor(self.background_color)
-            ax.set_facecolor(self.background_color)
-
-            sizes = [1] * total_slices
-            colors = [self.pizza_base_color if i % 2 == 0 else '#E6A86C' for i in range(total_slices)]
+            response = requests.get(self.url)
+            img = Image.open(BytesIO(response.content)).convert("RGBA")
+            # Resmi kare yap ve yeniden boyutlandır (Düzgün görünmesi için)
+            img = img.resize((500, 500))
             
-            # Seçilen dilimi ayırma (Explode)
-            explode = [0] * total_slices
-            if slice_to_take is not None and 0 <= slice_to_take < total_slices:
-                explode[slice_to_take] = 0.15 
+            # Kenarlarını yuvarlatalım (Tam daire pizza hissi için maskeleme)
+            mask = Image.new("L", (500, 500), 0)
+            draw = ImageDraw.Draw(mask)
+            draw.ellipse((10, 10, 490, 490), fill=255)
+            
+            # Maskeyi uygula (Köşeleri temizle)
+            output = Image.new("RGBA", (500, 500), (0, 0, 0, 0))
+            output.paste(img, (0, 0), mask=mask)
+            return output
+            
+        except Exception as e:
+            st.error(f"Pizza yüklenirken sorun oldu: {e}")
+            return Image.new('RGBA', (500, 500), color='gray')
 
-            wedges, _ = ax.pie(
-                sizes, explode=explode, colors=colors, startangle=90,
-                wedgeprops={'edgecolor': self.edge_color, 'linewidth': 2}
-            )
+    def get_sliced_pizza(self, total_slices, is_slice_taken=False):
+        """
+        Pizzayı belirtilen dilim sayısına göre böler ve görselleştirir.
+        Eğer 'is_slice_taken' True ise, bir dilimi eksik çizer.
+        """
+        img = self.pizza_img.copy()
+        draw = ImageDraw.Draw(img)
+        
+        center = (250, 250)
+        radius = 250
+        angle_per_slice = 360 / total_slices
+        
+        # 1. Dilim çizgilerini çiz (Daha net görmek için)
+        if not is_slice_taken:
+            for i in range(total_slices):
+                end_angle = i * angle_per_slice - 90
+                # Dereceyi radyana çevirme işini draw.line ile basitleştiriyoruz
+                # Pillow'da pie slice kullanmak daha kolay:
+                draw.pieslice([0, 0, 500, 500], start=end_angle, end=end_angle, fill=None, outline="white", width=3)
 
-            # Pepperoni (Salam) Çizimi
-            for i, wedge in enumerate(wedges):
-                if i == slice_to_take or i % 2 == 0: # Süsleme mantığı
-                    center = wedge.center
-                    theta = np.deg2rad((wedge.theta1 + wedge.theta2) / 2)
-                    r = 0.6
-                    # Patlayan dilim için koordinat kaydırma
-                    off_x = explode[i] * np.cos(theta)
-                    off_y = explode[i] * np.sin(theta)
-                    pep_x = center[0] + r * np.cos(theta) + off_x
-                    pep_y = center[1] + r * np.sin(theta) + off_y
-                    
-                    circle = plt.Circle((pep_x, pep_y), 0.08, color=self.pepperoni_color)
-                    ax.add_patch(circle)
+        # 2. Eğer dilim alındıysa, o kısmı "şeffaf" yap (Kesip at)
+        if is_slice_taken:
+            # İlk dilimi (0. indeks) kesip atıyoruz
+            start_angle = -90
+            end_angle = start_angle + angle_per_slice
+            
+            # Maske ile silme işlemi
+            mask = Image.new("L", (500, 500), 255) # Beyaz (Görünür)
+            mask_draw = ImageDraw.Draw(mask)
+            
+            # Silinecek dilimi siyaha boya
+            mask_draw.pieslice([0, 0, 500, 500], start_angle, end_angle, fill=0)
+            
+            # Maskeyi uygula
+            current_alpha = img.split()[-1]
+            # İki maskeyi birleştir
+            from PIL import ImageChops
+            new_alpha = ImageChops.multiply(current_alpha, mask)
+            img.putalpha(new_alpha)
+            
+        return img
 
-            ax.axis('equal')
-            return fig
-        except Exception:
-            return plt.figure()
+# --- OYUN BAŞLIYOR ---
+if 'secim' not in st.session_state:
+    st.session_state.secim = None
 
-# --- OYUN EKRANI ---
+# Pizzayı hazırla
+@st.cache_resource # Resmi her seferinde indirmesin, hafızada tutsun
+def get_slicer():
+    return InternetPizzaSlicer()
+
+slicer = get_slicer()
+
 st.title("🍕 Hangisi Daha Büyük? 🍕")
-st.write("Aşağıdaki pizzalardan bir dilim al!")
+st.write("Aşağıdaki pizzalara bak. Hangi dilim seni daha çok doyurur?")
 
-if 'secilen' not in st.session_state:
-    st.session_state.secilen = None
-
-visualizer = PizzaVisualizer()
 col1, col2 = st.columns(2)
 
-# 1/4 Pizza
+# --- SOL TARA (1/4) ---
 with col1:
     st.header("1/4 Pizza")
-    tiklama_1_4 = 0 if st.session_state.secilen == '1/4' else None
-    st.pyplot(visualizer.draw_pizza(4, tiklama_1_4), use_container_width=True)
-    if st.button("Bu Dilimi Ye (1/4)", key="b1"):
-        st.session_state.secilen = '1/4'
+    # Duruma göre resmi belirle
+    dilim_alindi_mi = (st.session_state.secim == '1/4')
+    resim_1 = slicer.get_sliced_pizza(4, is_slice_taken=dilim_alindi_mi)
+    
+    st.image(resim_1, use_column_width=True)
+    
+    if st.button("KOCAMAN Dilimi Al (1/4)", key="btn1"):
+        st.session_state.secim = '1/4'
         st.rerun()
 
-# 1/12 Pizza
+# --- SAĞ TARAF (1/12) ---
 with col2:
     st.header("1/12 Pizza")
-    tiklama_1_12 = 0 if st.session_state.secilen == '1/12' else None
-    st.pyplot(visualizer.draw_pizza(12, tiklama_1_12), use_container_width=True)
-    if st.button("Bu Dilimi Ye (1/12)", key="b2"):
-        st.session_state.secilen = '1/12'
+    # Duruma göre resmi belirle
+    dilim_alindi_mi = (st.session_state.secim == '1/12')
+    resim_2 = slicer.get_sliced_pizza(12, is_slice_taken=dilim_alindi_mi)
+    
+    st.image(resim_2, use_column_width=True)
+    
+    if st.button("KÜÇÜK Dilimi Al (1/12)", key="btn2"):
+        st.session_state.secim = '1/12'
         st.rerun()
 
-# SONUÇ GÖSTERİMİ
+# --- SONUÇ BÖLÜMÜ ---
 st.markdown("---")
-if st.session_state.secilen == '1/4':
-    st.success("DOĞRU SEÇİM! 😋")
-    st.write("4 parçaya bölünmüş pizzanın dilimi kocaman olur!")
+
+if st.session_state.secim == '1/4':
+    st.success("DOĞRU TERCİH! 😋")
+    st.write("Bak! Pizzadan kocaman bir üçgen eksildi. Bu dilim seni tıka basa doyurur.")
+    st.markdown("<h1 style='text-align: center;'>🍕 BÜYÜK DİLİM!</h1>", unsafe_allow_html=True)
     st.balloons()
-elif st.session_state.secilen == '1/12':
-    st.warning("HMM... BİRAZ KÜÇÜK? 🧐")
-    st.write("12 parçaya bölünmüş pizza dilimi çok küçüktür, doyurmaz!")
+
+elif st.session_state.secim == '1/12':
+    st.warning("ÇOK KÜÇÜK... 😕")
+    st.write("Pizzaya bak, eksilen parça o kadar ince ki neredeyse fark edilmiyor bile.")
+    st.markdown("<h1 style='text-align: center;'>🤏 MİNİCİK...</h1>", unsafe_allow_html=True)
