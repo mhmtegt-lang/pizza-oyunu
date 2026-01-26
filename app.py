@@ -21,6 +21,15 @@ st.markdown("""
         text-align: center;
         font-weight: bold;
     }
+    
+    /* Kesir Yazısı İçin Özel Stil */
+    .kesir-miktari {
+        font-size: 50px !important;
+        color: #FFD700 !important;
+        font-weight: 900 !important;
+        margin: 10px 0px;
+    }
+
     /* SİYAH BUTON YAZISI İÇİN KESİN ÇÖZÜM */
     div.stButton > button {
         background-color: #FFD700 !important;
@@ -33,12 +42,6 @@ st.markdown("""
         color: #000000 !important; 
         font-weight: 900 !important;
         font-size: 20px !important;
-    }
-    .tabak-konteynir {
-        background-color: rgba(255,255,255,0.1);
-        border-radius: 30px;
-        padding: 20px;
-        border: 2px solid #FFD700;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -70,14 +73,12 @@ class PizzaEngine:
         draw = ImageDraw.Draw(img)
         self._draw_base_pizza(draw)
         
-        # Kesim çizgileri
         angle_step = 360 / slices
         for i in range(slices):
             angle = math.radians(i * angle_step - 90)
             draw.line([self.center, self.center, self.center + 235 * math.cos(angle), self.center + 235 * math.sin(angle)], fill=self.color_line, width=4)
         
         if is_taken:
-            # Dilimi anında siler
             mask = Image.new("L", (self.size, self.size), 255)
             mask_draw = ImageDraw.Draw(mask)
             mask_draw.pieslice([15, 15, 485, 485], -90, -90 + angle_step, fill=0)
@@ -88,7 +89,7 @@ class PizzaEngine:
         # Tabak oluştur (Beyaz daire)
         img = Image.new("RGBA", (self.size, self.size), (0,0,0,0))
         draw = ImageDraw.Draw(img)
-        draw.ellipse([30, 30, 470, 470], fill="#F5F5F5", outline="#CCCCCC", width=5) # Tabak
+        draw.ellipse([30, 30, 470, 470], fill="#F5F5F5", outline="#CCCCCC", width=5)
         
         # Dilimi çiz
         pizza_img = Image.new("RGBA", (self.size, self.size), (0,0,0,0))
@@ -111,26 +112,25 @@ if 'p12' not in st.session_state: st.session_state.p12 = False
 engine = PizzaEngine()
 
 st.title("🍕 Hangi Dilim Daha Doyurucu? 🍕")
-st.write("Pizzalara tıkla, dilimleri tabaklara al!")
 
-# --- ÜST PANEL ---
+# --- ÜST PANEL: PİZZALAR ---
 col1, col2 = st.columns(2)
 
 with col1:
-    st.subheader("Büyük Dilimli Pizza")
+    st.markdown("## 4 Dilim") # Dilim sayısı yukarıda
     st.image(engine.get_pizza_view(4, st.session_state.p4), use_container_width=True)
     if st.button("BU PİZZADAN DİLİM AL", key="btn4"):
         st.session_state.p4 = True
         st.rerun()
 
 with col2:
-    st.subheader("Küçük Dilimli Pizza")
+    st.markdown("## 12 Dilim") # Dilim sayısı yukarıda
     st.image(engine.get_pizza_view(12, st.session_state.p12), use_container_width=True)
     if st.button("ŞU PİZZADAN DİLİM AL", key="btn12"):
         st.session_state.p12 = True
         st.rerun()
 
-# --- TABAK PANELİ ---
+# --- ALT PANEL: TABAKLAR ---
 if st.session_state.p4 or st.session_state.p12:
     st.markdown("---")
     st.markdown("## 🍽️ Senin Tabakların")
@@ -140,7 +140,7 @@ if st.session_state.p4 or st.session_state.p12:
     with t_col1:
         if st.session_state.p4:
             st.image(engine.get_slice_on_plate(4), use_container_width=True)
-            st.markdown("### KOCAMAN DİLİM")
+            st.markdown('<p class="kesir-miktari">1/4</p>', unsafe_allow_html=True) # Kesir miktarı tabakta
             st.markdown("#### **😋 KARNIN TIKA BASA DOYAR!**")
         else:
             st.write("Bu tabağa henüz dilim almadın.")
@@ -148,12 +148,14 @@ if st.session_state.p4 or st.session_state.p12:
     with t_col2:
         if st.session_state.p12:
             st.image(engine.get_slice_on_plate(12), use_container_width=True)
-            st.markdown("### KÜÇÜCÜK DİLİM")
+            st.markdown('<p class="kesir-miktari">1/12</p>', unsafe_allow_html=True) # Kesir miktarı tabakta
             st.markdown("#### **🧐 BU DİLİM SENİ DOYURMAZ...**")
         else:
             st.write("Bu tabağa henüz dilim almadın.")
 
-    if st.button("🍽️ TABAKLARI BOŞALT", key="reset"):
+    # Temizleme
+    st.markdown("<br>", unsafe_allow_html=True)
+    if st.button("🔄 TABAKLARI BOŞALT VE YENİDEN BAŞLA"):
         st.session_state.p4 = False
         st.session_state.p12 = False
         st.rerun()
